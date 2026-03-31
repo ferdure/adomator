@@ -1,0 +1,108 @@
+# Example adomator project configuration
+# One file per Azure DevOps project.
+#
+# Use '$ENV_VAR' or '${ENV_VAR}' syntax to reference environment variables.
+
+organization: "my-org"           # Azure DevOps organisation name (or full URL)
+project: "my-project"           # Azure DevOps project name
+token: "${AZURE_DEVOPS_TOKEN}"  # Personal Access Token (PAT)
+
+# ── Default settings applied to ALL repositories unless overridden ──────────
+
+defaults:
+  repository:
+    default_branch: "main"       # normalized to refs/heads/main automatically
+    is_disabled: false
+
+  branch_policies:
+    main:
+      reviewer:
+        enabled: true
+        blocking: true
+        minimum_approver_count: 1
+        creator_vote_counts: false
+        allow_downvotes: false
+        reset_on_source_push: true
+
+      comment:
+        enabled: true
+        blocking: true
+
+      merge_strategy:
+        enabled: true
+        blocking: true
+        allow_squash: true
+        allow_no_fast_forward: false
+        allow_rebase: false
+        allow_rebase_merge: false
+
+      work_item:
+        enabled: true
+        blocking: false
+
+  security:
+    permissions:
+      - principal: "[my-project]\\Contributors"
+        allow:
+          - GenericRead
+          - GenericContribute
+          - CreateBranch
+          - PullRequestContribute
+        deny: []
+
+      - principal: "[my-project]\\Readers"
+        allow:
+          - GenericRead
+        deny: []
+
+# ── Per-repository declarations ──────────────────────────────────────────────
+# Any field not listed here falls back to the defaults above.
+
+repositories:
+  # Repo that uses all defaults – just declare its existence.
+  - name: "service-alpha"
+
+  # Repo with a stricter reviewer policy for 'main'.
+  - name: "service-beta"
+    repository:
+      default_branch: "develop"
+    branch_policies:
+      main:
+        reviewer:
+          minimum_approver_count: 2
+          reset_on_source_push: true
+      develop:
+        reviewer:
+          minimum_approver_count: 1
+          blocking: true
+
+  # Repo with a CI build validation gate.
+  - name: "service-gamma"
+    branch_policies:
+      main:
+        build_validations:
+          - display_name: "CI Build"
+            build_definition_id: 42
+            queue_on_source_update: true
+            valid_duration: 720
+            enabled: true
+            blocking: true
+
+  # Repo with a custom security policy (overrides defaults for this repo).
+  - name: "service-delta"
+    security:
+      permissions:
+        - principal: "[my-project]\\Contributors"
+          allow:
+            - GenericRead
+            - GenericContribute
+            - CreateBranch
+            - PullRequestContribute
+            - ForcePush
+          deny: []
+        - principal: "[my-project]\\Project Administrators"
+          allow:
+            - ManagePermissions
+            - DeleteRepository
+            - RenameRepository
+          deny: []
